@@ -10,7 +10,6 @@ RUN apt-get update \
             git build-essential $ADDITIONAL_PACKAGES \
       && rm -rf /var/lib/apt/lists/*
 
-COPY configure.sh /tmp/
 
 ARG SOURCE_BRANCH=unspecified
 ENV SOURCE_BRANCH $SOURCE_BRANCH
@@ -20,16 +19,20 @@ ENV SOURCE_COMMIT $SOURCE_COMMIT
 
 ARG CONFIG
 
+COPY configure.sh /tmp/ 
+RUN sed -i -e 's/\r$//' /tmp/configure.sh
+
+RUN chmod +x /tmp/configure.sh
+
 # Get and build darknet
 RUN git clone https://github.com/DavidEngelman/autoBlur.git && cd autoBlur/darknet \
-      && /tmp/configure.sh $CONFIG && make \
+      && bash /tmp/configure.sh $CONFIG && make \
       && cp darknet /usr/local/bin \
-      && cd .. && rm -rf darknet
+      && cd ../..
 
-# Heads dataset
-RUN wget https://www.di.ens.fr/willow/research/headdetection/release/head.zip \
-    && unzip head.zip \
-    && mv head autoBlur/darknet/build/darknet/x64/data
+RUN apt-get update -y && apt-get upgrade -y
+RUN apt-get install -y unzip
+RUN apt-get install -y wget
 
 # Tiny yolov4 weights
 RUN wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.conv.29 \
@@ -39,4 +42,8 @@ RUN wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_p
 RUN wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.conv.137 \
     && mv yolov4.conv.137 autoBlur/darknet/build/darknet/x64
 
+# Heads dataset
+# RUN wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1NvxKyLvsh-I6JQSewipR04VdrSMS0RaG' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1NvxKyLvsh-I6JQSewipR04VdrSMS0RaG" -O head.zip && rm -rf /tmp/cookies.txt
+RUN unzip head.zip
+RUN mv head autoBlur/darknet/build/darknet/x64/data
 
